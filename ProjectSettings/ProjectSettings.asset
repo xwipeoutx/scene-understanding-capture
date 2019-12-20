@@ -551,7 +551,8 @@ PlayerSettings:
   webGLLinkerTarget: 1
   webGLThreadsSupport: 0
   webGLWasmStreaming: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    14: release
   platformArchitecture: {}
   scriptingBackend:
     Standalone: 1
@@ -568,7 +569,7 @@ PlayerSettings:
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   metroPackageName: SceneUnderstandingBox
-  metroPackageVersion: 1.0.0.0
+  metroPackageVersion: 1.0.2.0
   metroCertificatePath: Assets/WSATestCertificate.pfx
   metroCertificatePassword: 
   metroCertificateSubject: Readify
@@ -618,7 +619,7 @@ PlayerSettings:
       Proximity: False
       RecordedCallsFolder: False
       RemoteSystem: False
-      RemovableStorage: False
+      RemovableStorage: True
       SharedUserCertificates: False
       SpatialPerception: True
       SystemManagement: False
