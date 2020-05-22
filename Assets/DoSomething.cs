@@ -1,15 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.MixedReality.SceneUnderstanding;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Windows;
 
 public class DoSomething : MonoBehaviour
 {
-    [SerializeField] TextMeshPro text;
+    [SerializeField] TextMeshPro[] texts;
+    [SerializeField] TextMeshProUGUI[] textsGui;
 
     [SerializeField] GameObject oneMetreQuad;
     [SerializeField] GameObject justASphere;
@@ -18,83 +17,106 @@ public class DoSomething : MonoBehaviour
     [SerializeField] Material wallMaterial;
     [SerializeField] Material platformMaterial;
     [SerializeField] Material otherMaterial;
+    [SerializeField] Material ceilingMaterial;
+    [SerializeField] private UnityEngine.Object sceneAsset;
 
+    private Queue<string> otherMessages = new Queue<string>();
+
+    private ISceneUnderstander sceneUnderstander;
+
+    private void OnEnable()
+    {
+        sceneUnderstander = SceneObserver.IsSupported()
+            ? (ISceneUnderstander) new SceneUnderstander()
+            : new FakeSceneUnderstander(SceneToLoad);
+    }
+
+    private void OnDisable()
+    {
+        sceneUnderstander?.StopPolling();
+        sceneUnderstander = null;
+    }
+
+    private void OnDestroy()
+    {
+        sceneUnderstander?.StopPolling();
+        sceneUnderstander = null;
+    }
 
     void Start()
     {
         AppendLine("Loaded");
+        Application.logMessageReceived += (condition, trace, type) => otherMessages.Enqueue($"{type}: {condition}");
+    }
+
+    void Update()
+    {
+        while (otherMessages.Any())
+            AppendLine(otherMessages.Dequeue());
         
-          
+        SetLogText();
     }
 
-    public void DoTheThing()
+    public void ToggleObservation()
     {
-        AppendLine("Button clicked");
-        Task.Factory.StartNew(DoTheThingAsync, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.FromCurrentSynchronizationContext());
+        sceneUnderstander.StartPolling();
     }
 
-    private async Task DoTheThingAsync()
+    public void TakeSnapshot()
     {
-        try
+        sceneUnderstander.TakeSnapshot();
+    }
+
+    public void DrawScene()
+    {
+        if (sceneUnderstander.MostRecentScene == null)
         {
-            Scene scene;
-            if (SceneObserver.IsSupported())
-            {
-                AppendLine("Observer Supported - doing real observations");
-                scene = await DoSomeRealObservations();
-            }
-            else
-            {
-                AppendLine("Observer not supported - doing fake observations");
-                scene = await DoSomeFakeObservations();
-            }
-
-            int infiniteStopper = 100;
-            while (transform.childCount > 0 && infiniteStopper-- > 0)
-                DestroyImmediate(transform.GetChild(0).gameObject);
-
-            var floor = scene.SceneObjects.FirstOrDefault(o => o.Kind == SceneObjectKind.Floor);
-            var orientation = Quaternion.identity;
-
-            if (floor != null)
-            {
-                orientation =  Quaternion.Inverse(floor.Orientation.ToUnity());
-                if (SceneObserver.IsSupported())
-                {
-                    var correction = Quaternion.FromToRotation(Vector3.back, Vector3.up);
-                    orientation = correction * orientation;
-                }
-            }
-            
-            var sceneObjectKinds = new[] { SceneObjectKind.Floor, SceneObjectKind.Wall, SceneObjectKind.Ceiling, SceneObjectKind.Platform};
-            foreach (var sceneObject in scene.SceneObjects.Where(o => o.Quads.Any() && sceneObjectKinds.Contains(o.Kind)))
-            {
-                var gameObj = new GameObject($"{sceneObject.Kind}-{sceneObject.Id}");
-                gameObj.transform.parent = transform;
-                var trsMatrix = sceneObject.GetLocationAsMatrix().ToUnity();
-                
-                Vector3 position = trsMatrix.GetColumn(3);
-                var rotation = Quaternion.LookRotation(
-                    trsMatrix.GetColumn(2),
-                    trsMatrix.GetColumn(1)
-                );
-
-                gameObj.transform.position = orientation * position;
-                gameObj.transform.rotation = orientation * rotation;
-                
-                foreach (var quad in sceneObject.Quads)
-                {
-                    var quadObj = Instantiate(oneMetreQuad, gameObj.transform);
-                    quadObj.name = $"Quad-{quad.Id}";
-                    quadObj.transform.localScale = new Vector3(quad.Extents.X, quad.Extents.Y, 1);
-                }
-
-                SetMaterials(gameObj, sceneObject);
-            }
+            AppendLine("No scene to draw!");
+            return;
         }
-        catch (Exception e)
+
+        var scene = sceneUnderstander.MostRecentScene;
+        int infiniteStopper = 100;
+        while (transform.childCount > 0 && infiniteStopper-- > 0)
+            DestroyImmediate(transform.GetChild(0).gameObject);
+
+        var floor = scene.SceneObjects.FirstOrDefault(o => o.Kind == SceneObjectKind.Floor);
+        var orientation = Quaternion.identity;
+
+        if (floor != null)
         {
-            AppendLine("*** Error: " + e.Message);
+            var floorOrientation = floor.Orientation.ToUnity();
+            AppendLine("Floor orientation = " + floorOrientation.eulerAngles);
+
+            orientation = Quaternion.Inverse(floorOrientation);
+            var correction = Quaternion.FromToRotation(Vector3.back, Vector3.up);
+            orientation = correction * orientation;
+        }
+
+        var sceneObjectKinds = new[] {SceneObjectKind.Floor, SceneObjectKind.Wall, SceneObjectKind.Ceiling, SceneObjectKind.Platform};
+        foreach (var sceneObject in scene.SceneObjects.Where(o => o.Quads.Any() && sceneObjectKinds.Contains(o.Kind)))
+        {
+            var gameObj = new GameObject($"{sceneObject.Kind}-{sceneObject.Id}");
+            gameObj.transform.parent = transform;
+            var trsMatrix = sceneObject.GetLocationAsMatrix().ToUnity();
+
+            Vector3 position = trsMatrix.GetColumn(3);
+            var rotation = Quaternion.LookRotation(
+                trsMatrix.GetColumn(2),
+                trsMatrix.GetColumn(1)
+            );
+
+            gameObj.transform.position = orientation * position;
+            gameObj.transform.rotation = orientation * rotation;
+
+            foreach (var quad in sceneObject.Quads)
+            {
+                var quadObj = Instantiate(oneMetreQuad, gameObj.transform);
+                quadObj.name = $"Quad-{quad.Id}";
+                quadObj.transform.localScale = new Vector3(quad.Extents.X, quad.Extents.Y, 1);
+            }
+
+            SetMaterials(gameObj, sceneObject);
         }
     }
 
@@ -111,6 +133,12 @@ public class DoSomething : MonoBehaviour
 
                 break;
             case SceneObjectKind.Ceiling:
+                foreach (var meshRenderer in meshes)
+                {
+                    meshRenderer.sharedMaterial = ceilingMaterial;
+                }
+
+                break;
             case SceneObjectKind.Floor:
                 foreach (var meshRenderer in meshes)
                 {
@@ -125,7 +153,7 @@ public class DoSomething : MonoBehaviour
                 }
 
                 break;
-                
+
             case SceneObjectKind.Background:
             case SceneObjectKind.Unknown:
             case SceneObjectKind.World:
@@ -140,75 +168,51 @@ public class DoSomething : MonoBehaviour
         }
     }
 
-    private async Task<Scene> DoSomeFakeObservations()
+    private string SceneToLoad
     {
-        await Task.Delay(1000);
-        AppendLine("Waited a bit");
-
-        await Task.Run(() => Thread.Sleep(100));
-
-        AppendLine("Waited a bit in the background");
-
-        var sceneToLoad = $"C:/Code/sandbox/scene-understanding-test/Scene Understanding/Assets/SceneUnderstandingScenes/SU-Purple.bytes";
-        var bytes = File.ReadAllBytes(sceneToLoad);
-
-        return Scene.Deserialize(bytes);
-
-        throw new NotSupportedException("No fakes here sonny");
+        get
+        {
+#if UNITY_EDITOR
+            var sceneToLoad = UnityEditor.AssetDatabase.GetAssetPath(sceneAsset);
+#else
+            var sceneToLoad = $"C:/Code/sandbox/scene-understanding-test/Scene Understanding/Assets/SceneUnderstandingScenes/SU-Purple.bytes";
+#endif
+            return sceneToLoad;
+        }
     }
+
+    private string currentLog = string.Empty;
 
     private void AppendLine(string line)
     {
-        var lines = text.text.Split('\n')
-            .Append(line)
-            .Take(10);
+        Console.WriteLine(line);
 
-        var newLines = string.Join(Environment.NewLine, lines);
-        text.text = newLines;
+        var lines = currentLog.Split('\n')
+            .Append(line)
+            .Reverse()
+            .Take(10)
+            .Reverse();
+
+        currentLog = string.Join(Environment.NewLine, lines);
+        SetLogText();
     }
 
-    private async Task<Scene> DoSomeRealObservations()
+    private void SetLogText()
     {
-        AppendLine("Requesting access");
-        var status = await SceneObserver.RequestAccessAsync();
+        var initialStats = $@"State: {sceneUnderstander.CurrentState}
+Scene: {sceneUnderstander.SceneHash}: {sceneUnderstander.SceneObjectCount} objects ({sceneUnderstander.SearchRadius}m radius)
+Data size: {sceneUnderstander.SceneSize}
+";
+        var logMessage = initialStats + currentLog;
 
-        if (status != SceneObserverAccessStatus.Allowed)
+        foreach (var text in texts)
         {
-            throw new Exception($"Expected to get access.  Actually got: " + status);
+            text.text = logMessage;
         }
 
-        AppendLine("Waiting a bit");
-        await Task.Delay(100);
-
-        AppendLine("Access granted! Querying scene...");
-        var querySettings = new SceneQuerySettings()
+        foreach (var text in textsGui)
         {
-            EnableWorldMesh = true,
-            EnableSceneObjectMeshes = true,
-            EnableSceneObjectQuads = true,
-            RequestedMeshLevelOfDetail = SceneMeshLevelOfDetail.Medium,
-            EnableOnlyObservedSceneObjects = false
-        };
-        var computed = await SceneObserver.ComputeSerializedAsync(querySettings, 10);
-
-        AppendLine("Query done! Got" + computed.Size + " bytes");
-        var data = new byte[computed.Size];
-        
-        AppendLine("Waiting a bit");
-        await Task.Delay(2000);
-
-        var filename = $"{Application.persistentDataPath}/serialized-scene-{DateTime.Now.ToFileTime()}.bin";
-        AppendLine($"Saving to {filename}");
-        AppendLine("Waiting a bit");
-        await Task.Delay(2000);
-        File.WriteAllBytes(filename, data);
-        AppendLine($"Saved to {filename}");
-        AppendLine("Waiting a bit");
-        await Task.Delay(2000);
-
-        var scene = Scene.Deserialize(data);
-        AppendLine($"Summary: {scene.SceneObjects.Count} objects");
-        return scene;
+            text.text = logMessage;
+        }
     }
-    
 }
