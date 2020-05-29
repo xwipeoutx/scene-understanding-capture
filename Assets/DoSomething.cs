@@ -22,7 +22,7 @@ public class DoSomething : MonoBehaviour
     {
         var sceneFetcher = SceneObserver.IsSupported()
             ? (ISceneFetcher) new SceneFetcher()
-            : new BuiltInSceneFetcher(fallbackScene.sceneSnapshot);
+            : new BuiltInSceneFetcher(() =>  fallbackScene.sceneSnapshot);
         
         sceneManager = new SceneManager(sceneFetcher);
         sceneManager.onScene.AddListener(() => drawer.DrawScene(SceneSnapshot.Create(sceneManager.Scene)));

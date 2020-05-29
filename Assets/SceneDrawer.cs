@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.MixedReality.SceneUnderstanding;
 using SceneUnderstandingScenes;
@@ -15,8 +16,14 @@ public class SceneDrawer : MonoBehaviour
     [SerializeField] SceneSnapshotWrapper gizmoScene;
     private SceneSnapshot currentScene;
 
+    private Dictionary<Guid, GameObject> sceneObjects;
+    private Dictionary<Guid, GameObject> sceneGeometries;
+
     void OnEnable()
     {
+        Clear();
+        sceneObjects = new Dictionary<Guid, GameObject>();
+        sceneGeometries = new Dictionary<Guid, GameObject>();
         currentScene = null;
     }
 
@@ -33,39 +40,88 @@ public class SceneDrawer : MonoBehaviour
     public void DrawScene(SceneSnapshot scene)
     {
         currentScene = scene;
-        Clear();
         
         var sceneToWorld = scene.originMatrix;
         var scenePosition = sceneToWorld.GetColumn(3);
         var sceneRotation = sceneToWorld.rotation;
         transform.SetPositionAndRotation(scenePosition, sceneRotation);
         
+        var foundSceneObjects = new HashSet<Guid>();
+        var foundSceneGeometries = new HashSet<Guid>();
+        
         var sceneObjectKinds = new[] {SceneObjectKind.Floor, SceneObjectKind.Wall, SceneObjectKind.Ceiling, SceneObjectKind.Platform};
         foreach (var sceneObject in scene.Scene.SceneObjects.Where(o => o.Quads.Any() && sceneObjectKinds.Contains(o.Kind)))
         {
-            var gameObj = new GameObject($"{sceneObject.Kind}-{sceneObject.Id}");
-            gameObj.transform.SetParent(transform);
-            var sceneObjectTransform = sceneObject.GetLocationAsMatrix().ToUnity();
-
-            var position = sceneObjectTransform.GetColumn(3);
-            var rotation = sceneObjectTransform.rotation;
-            gameObj.transform.localPosition = position;
-            gameObj.transform.localRotation = rotation;
+            foundSceneObjects.Add(sceneObject.Id);
+            var componentTransform = CreateOrUpdateSceneObject(sceneObject);
 
             foreach (var quad in sceneObject.Quads)
             {
-                var quadObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                quadObj.transform.SetParent(gameObj.transform, false);
-                quadObj.name = $"Quad-{quad.Id}";
-                quadObj.transform.localScale = new Vector3(quad.Extents.X, quad.Extents.Y, 1);
+                foundSceneGeometries.Add(quad.Id);
+                CreateOrUpdateQuad(componentTransform.transform, quad);
             }
 
-            SetMaterials(gameObj, sceneObject);
+            SetMaterials(componentTransform, sceneObject);
         }
+
+        foreach (var id in sceneObjects.Keys.Where(id => !foundSceneObjects.Contains(id)).ToArray())
+        {
+            Destroy(sceneObjects[id]);
+            sceneObjects.Remove(id);
+        }
+        
+        foreach (var id in sceneGeometries.Keys.Where(id => !foundSceneGeometries.Contains(id)).ToArray())
+        {
+            Destroy(sceneGeometries[id]);
+            sceneGeometries.Remove(id);
+        }
+    }
+
+    private GameObject CreateOrUpdateQuad(Transform sceneObjectTransform, SceneQuad quad)
+    {
+        GameObject quadObj;
+        if (sceneGeometries.ContainsKey(quad.Id))
+        {
+            quadObj = sceneGeometries[quad.Id];
+        }
+        else
+        {
+            quadObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quadObj.transform.SetParent(sceneObjectTransform, false);
+            quadObj.name = $"Quad-{quad.Id}";
+            sceneGeometries.Add(quad.Id, quadObj);
+        }
+        quadObj.transform.localScale = new Vector3(quad.Extents.X, quad.Extents.Y, 1);
+        return quadObj;
+    }
+    
+    private GameObject CreateOrUpdateSceneObject(SceneObject sceneObject)
+    {
+        var sceneObjectTransform = sceneObject.GetLocationAsMatrix().ToUnity();
+        var position = sceneObjectTransform.GetColumn(3);
+        var rotation = sceneObjectTransform.rotation;
+
+        GameObject gameObj;
+        if (sceneObjects.ContainsKey(sceneObject.Id))
+        {
+            gameObj = sceneObjects[sceneObject.Id];
+        }
+        else
+        {
+            gameObj = new GameObject($"{sceneObject.Kind}-{sceneObject.Id}");
+            gameObj.transform.SetParent(transform);
+            sceneObjects.Add(sceneObject.Id, gameObj);
+        }
+        
+        gameObj.transform.localPosition = position;
+        gameObj.transform.localRotation = rotation;
+        return gameObj;
     }
 
     public void Clear()
     {
+        sceneObjects = new Dictionary<Guid, GameObject>();
+        sceneGeometries = new Dictionary<Guid, GameObject>();
         var infiniteStopper = 100;
         while (transform.childCount > 0 && infiniteStopper-- > 0)
             DestroyImmediate(transform.GetChild(0).gameObject);
