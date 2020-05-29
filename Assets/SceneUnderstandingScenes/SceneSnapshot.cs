@@ -79,15 +79,29 @@ namespace SceneUnderstandingScenes
         {
             return Serialize(sceneBytes, isMatrixInferred ? originMatrix : (Matrix4x4?)null);
         }
-        public static SceneSnapshot CreateFromDevice(byte[] sceneBytes)
+        
+        public static SceneSnapshot Create(Scene scene)
         {
-            var scene = Scene.Deserialize(sceneBytes);
             var snapshot = new SceneSnapshot();
             var sceneOriginMatrix = ReadOriginMatrixFromScene(scene);
             snapshot.originMatrix = sceneOriginMatrix.HasValue ? sceneOriginMatrix.Value : InferMatrixFromSceneFloor(scene);
             snapshot.isMatrixInferred = sceneOriginMatrix == null;
+            snapshot._scene = scene;
+            return snapshot;
+        }
+        
+        public static SceneSnapshot CreateFromDevice(byte[] sceneBytes)
+        {
+            var scene = Scene.Deserialize(sceneBytes);
+            var snapshot = Create(scene);
             snapshot.sceneBytes = sceneBytes;
             return snapshot;
+        }
+
+        public Matrix4x4 ReadOrInferOriginMatrix(Scene scene)
+        {
+            return ReadOriginMatrixFromScene(scene) 
+                   ?? InferMatrixFromSceneFloor(scene);
         }
 
         public static byte[] SerializeFromDevice(Scene scene, byte[] sceneBytes)

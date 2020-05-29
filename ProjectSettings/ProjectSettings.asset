@@ -603,7 +603,7 @@ PlayerSettings:
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   metroPackageName: SceneUnderstandingBox
-  metroPackageVersion: 1.0.18.0
+  metroPackageVersion: 1.0.22.0
   metroCertificatePath: Assets/WSATestCertificate.pfx
   metroCertificatePassword: 
   metroCertificateSubject: Readify

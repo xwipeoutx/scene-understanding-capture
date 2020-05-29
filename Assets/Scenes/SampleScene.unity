@@ -1612,6 +1612,49 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1527214683}
   m_CullTransparentMesh: 0
+--- !u!1 &1580613625
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1580613627}
+  - component: {fileID: 1580613626}
+  m_Layer: 0
+  m_Name: Async
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1580613626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1580613625}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e6ecbbf0b5840b09d7b4ee7f0a62b7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1580613627
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1580613625}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1641412824
 GameObject:
   m_ObjectHideFlags: 0
@@ -1803,8 +1846,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1691307796}
+  - component: {fileID: 1691307797}
   m_Layer: 0
-  m_Name: WorldParent
+  m_Name: Scene View
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1824,6 +1868,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1691307797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1691307795}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a11240f3267458e84be7f59d5d8c703, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  floorMaterial: {fileID: 2100000, guid: 41339f6a22c05e9438189638eb5cad15, type: 2}
+  wallMaterial: {fileID: 2100000, guid: 11486a452a460494c88fca0a06e6fa84, type: 2}
+  platformMaterial: {fileID: 2100000, guid: 03a9f942e560e3546b207287a99614c3, type: 2}
+  otherMaterial: {fileID: 2100000, guid: 1d637606e72dc7443b511e6923e8475f, type: 2}
+  ceilingMaterial: {fileID: 2100000, guid: 574fde739a54f154d8fcc84c0526542e, type: 2}
+  gizmoScene: {fileID: -7892924654219311236, guid: 086ce8769424d1249b1b1fe6691faa14,
+    type: 3}
 --- !u!1001 &1698275944
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1963,22 +2026,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7aa90259000e82849a9e9508de717e5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldParent: {fileID: 1691307796}
   texts: []
   textsGui:
   - {fileID: 813958119}
   - {fileID: 1148656071}
-  oneMetreQuad: {fileID: 4754650614497435644, guid: a66f28c2967a2a843840bc4d46639dc8,
-    type: 3}
-  justASphere: {fileID: 390153972601761933, guid: 48037545269b43e47824df4f35360bfc,
-    type: 3}
-  floorMaterial: {fileID: 2100000, guid: 41339f6a22c05e9438189638eb5cad15, type: 2}
-  wallMaterial: {fileID: 2100000, guid: 11486a452a460494c88fca0a06e6fa84, type: 2}
-  platformMaterial: {fileID: 2100000, guid: 03a9f942e560e3546b207287a99614c3, type: 2}
-  otherMaterial: {fileID: 2100000, guid: 1d637606e72dc7443b511e6923e8475f, type: 2}
-  ceilingMaterial: {fileID: 2100000, guid: 574fde739a54f154d8fcc84c0526542e, type: 2}
   fallbackScene: {fileID: -7892924654219311236, guid: b6eba56737738574c97a3b3eab04e198,
     type: 3}
+  drawer: {fileID: 1691307797}
 --- !u!4 &1787487586
 Transform:
   m_ObjectHideFlags: 0
